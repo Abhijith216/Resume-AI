@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: resumeai
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: LLM_API_KEY
+        sync: false          # set in the dashboard — never commit secrets
+      - key: LLM_PROVIDER
+        sync: false
+      - key: LLM_MODEL
+        sync: false
+      - key: LLM_BASE_URL
+        sync: false
+      - key: LLM_TIMEOUT_MS
+        value: "45000"
+    disk:
+      name: resumeai-data
+      mountPath: /data
+      sizeGB: 1

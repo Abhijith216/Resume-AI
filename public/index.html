@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="AI-powered resume builder — craft polished, tailored resumes in minutes.">
+  <title>Resume Builder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="header">
+      <div class="logo" aria-label="ResumeAI home">
+        <span class="logo-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span>ResumeAI</span>
+      </div>
+      <nav>
+        <span class="status-badge" id="status-badge">
+          <span class="status-dot"></span>
+          Checking…
+        </span>
+      </nav>
+    </header>
+
+    <main class="main">
+      <section class="hero" id="hero">
+        <p class="eyebrow">AI RESUME WORKSPACE</p>
+        <h1>Build the story that <span>gets the interview.</span></h1>
+        <p>Upload your existing resume and refine every detail with live ATS feedback.</p>
+      </section>
+
+      <section class="upload-section" aria-label="Upload resume">
+        <div class="upload-card" id="upload-card">
+          <div id="drop-zone" class="drop-zone" role="button" tabindex="0" aria-label="File upload drop zone">
+            <div class="drop-zone-icon" aria-hidden="true">↥</div>
+            <p class="drop-zone-title">Drop your resume here</p>
+            <p class="drop-zone-sub">PDF or DOCX · Max 10 MB</p>
+            <label class="btn btn-outline" for="file-input" id="browse-label">Choose a file</label>
+            <input type="file" id="file-input" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" class="visually-hidden" aria-label="Choose resume file">
+          </div>
+        </div>
+
+        <div id="upload-progress" class="upload-state hidden" aria-live="polite">
+          <div class="spinner"></div>
+          <p class="upload-state-label">Reading and organizing your resume…</p>
+        </div>
+
+        <div id="upload-error" class="upload-state hidden" role="alert" aria-live="assertive">
+          <div class="error-box">
+            <span class="error-icon" aria-hidden="true">!</span>
+            <p id="error-message" class="error-text"></p>
+            <button class="btn btn-ghost btn-sm" id="retry-btn">Try another file</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="editor-section" class="editor-section hidden" aria-live="polite">
+        <div class="workspace-heading">
+          <div>
+            <p class="eyebrow">YOUR RESUME</p>
+            <h2>Shape every detail.</h2>
+          </div>
+          <div class="workspace-actions">
+            <span class="save-state"><span class="save-dot"></span> Live analysis</span>
+            <button class="btn btn-ghost btn-sm" id="clear-btn">Start over</button>
+          </div>
+        </div>
+
+        <div class="editor-layout">
+          <div class="editor-column">
+            <section class="glass-panel job-card job-card-above" aria-label="Target job">
+              <div class="section-heading compact-heading">
+                <div>
+                  <p class="eyebrow">OPTIONAL CONTEXT</p>
+                  <h3>Target job</h3>
+                </div>
+                <span class="hint-chip">Improves match score</span>
+              </div>
+              <label class="visually-hidden" for="job-desc">Target job description</label>
+              <textarea id="job-desc" class="job-desc-input" rows="5" placeholder="Paste the job description to check keyword alignment, highlight matched vs. missing keywords in the preview, and generate a tailored cover letter…"></textarea>
+            </section>
+
+            <div class="editor-pane glass-panel">
+              <div class="pane-heading">
+                <div>
+                  <h3>Resume details</h3>
+                  <p>Edit a field and your feedback refreshes automatically.</p>
+                </div>
+              <span id="resume-word-count" class="word-count"></span>
+            </div>
+            <form id="resume-editor" novalidate></form>
+            </div>
+
+            <section class="glass-panel versions-card" aria-label="Saved versions">
+              <div class="section-heading compact-heading">
+                <div>
+                  <p class="eyebrow">LIBRARY</p>
+                  <h3>Saved versions</h3>
+                </div>
+                <span id="versions-count" class="count-badge">—</span>
+              </div>
+              <div class="version-save-row">
+                <input id="version-name" type="text" maxlength="120" placeholder="Name this version, e.g. “Backend role — Company X”" aria-label="Version name">
+                <button class="add-entry-btn version-save-btn" id="save-version-btn" type="button">Save</button>
+              </div>
+              <div id="versions-list" class="versions-list"></div>
+              <button class="btn btn-ghost btn-sm update-version-btn hidden" id="update-version-btn" type="button">Save changes to loaded version</button>
+            </section>
+          </div>
+
+          <aside class="insights-pane" aria-label="Resume insights">
+            <section class="glass-panel score-card" aria-labelledby="score-title">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">LIVE EVALUATION</p>
+                  <h3 id="score-title">Resume health</h3>
+                </div>
+                <button id="analyze-btn" class="refresh-button" type="button"><span aria-hidden="true">↻</span> Refresh</button>
+              </div>
+              <p id="analysis-status" class="analysis-status">Preparing your workspace…</p>
+              <div id="analysis-progress" class="analysis-loading hidden" aria-live="polite">
+                <span class="mini-spinner"></span> Re-evaluating your resume…
+              </div>
+              <div id="analysis-error" class="analysis-inline-error hidden" role="alert">
+                <span aria-hidden="true">!</span><span id="analysis-error-message"></span>
+              </div>
+              <div class="score-list">
+                <article class="score-row">
+                  <div class="score-label-row"><span>ATS structure</span><strong id="ats-score-value">—</strong></div>
+                  <div class="score-track" role="progressbar" aria-label="ATS structure score" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="ats-score-bar" class="score-fill score-fill-violet"></span></div>
+                  <p>Clear hierarchy, conventional sections, and easy parsing.</p>
+                </article>
+                <article class="score-row">
+                  <div class="score-label-row"><span>Job match</span><strong id="match-score-value">—</strong></div>
+                  <div class="score-track" role="progressbar" aria-label="Job match score" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="match-score-bar" class="score-fill score-fill-coral"></span></div>
+                  <p id="match-score-note">Add a target job to measure keyword alignment.</p>
+                </article>
+              </div>
+              <div id="missing-keywords" class="missing-keywords hidden">
+                <p>Keywords to consider</p>
+                <div id="keyword-list" class="keyword-list"></div>
+              </div>
+            </section>
+
+            <section class="glass-panel insight-card" aria-labelledby="issues-title">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">PARSING CHECK</p>
+                  <h3 id="issues-title">Structure issues</h3>
+                </div>
+                <span id="issue-count" class="count-badge">—</span>
+              </div>
+              <div id="structure-issues" class="empty-insight">Run an analysis to uncover anything that could confuse an ATS.</div>
+            </section>
+
+            <section class="glass-panel insight-card suggestions-card" aria-labelledby="suggestions-title">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">CONTENT UPGRADE</p>
+                  <h3 id="suggestions-title">Rewrite suggestions</h3>
+                </div>
+                <span id="suggestion-count" class="count-badge">—</span>
+              </div>
+              <div id="rewrite-suggestions" class="empty-insight">Suggestions will appear here after your first analysis.</div>
+            </section>
+          </aside>
+        </div>
+      </section>
+
+      <section id="cover-letter-section" class="export-section hidden" aria-label="Cover letter">
+        <div class="workspace-heading">
+          <div>
+            <p class="eyebrow">TAILORED PITCH</p>
+            <h2>Cover letter.</h2>
+          </div>
+        </div>
+
+        <div class="cover-letter-layout">
+          <div class="template-picker glass-panel">
+            <div class="section-heading compact-heading">
+              <div>
+                <p class="eyebrow">DRAFT</p>
+                <h3>Your letter</h3>
+              </div>
+              <span class="hint-chip" id="cover-letter-mode" hidden>Fallback draft</span>
+            </div>
+            <p class="cover-letter-hint">Generated from your resume and the target job description. Edit freely — the preview updates as you type.</p>
+            <textarea id="cover-letter-input" class="job-desc-input cover-letter-input" rows="14" placeholder="Click “Generate draft” to create a tailored cover letter, or start writing your own…"></textarea>
+            <div class="export-actions">
+              <button class="btn export-btn export-btn-pdf" id="generate-letter-btn" type="button">✨ Generate draft</button>
+              <button class="btn export-btn export-btn-docx" id="download-letter-btn" type="button" disabled>
+                <span class="export-icon" aria-hidden="true">⬇</span> Download PDF
+              </button>
+            </div>
+            <p id="cover-letter-status" class="export-status"></p>
+          </div>
+
+          <div class="preview-pane glass-panel">
+            <div class="section-heading compact-heading">
+              <div>
+                <p class="eyebrow">LIVE PREVIEW</p>
+                <h3>How it will look</h3>
+              </div>
+              <span id="cover-letter-preview-loading" class="preview-loading hidden"><span class="mini-spinner"></span> Rendering…</span>
+            </div>
+            <div class="preview-frame-wrapper">
+              <iframe id="cover-letter-preview-iframe" class="preview-iframe" title="Cover letter preview" sandbox="allow-same-origin"></iframe>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="export-section" class="export-section hidden" aria-label="Export resume">
+        <div class="workspace-heading">
+          <div>
+            <p class="eyebrow">EXPORT</p>
+            <h2>Pick a template &amp; download.</h2>
+          </div>
+        </div>
+
+        <div class="export-layout">
+          <div class="template-picker glass-panel">
+            <div class="section-heading compact-heading">
+              <div>
+                <p class="eyebrow">TEMPLATE</p>
+                <h3>Choose a style</h3>
+              </div>
+            </div>
+
+            <div class="template-options">
+              <button class="template-card active" id="tpl-classic" data-template="classic" type="button">
+                <div class="tpl-preview-mini tpl-classic-mini">
+                  <span class="tpl-mini-name"></span>
+                  <span class="tpl-mini-bar"></span>
+                  <span class="tpl-mini-line"></span>
+                  <span class="tpl-mini-line short"></span>
+                  <span class="tpl-mini-bar"></span>
+                  <span class="tpl-mini-line"></span>
+                  <span class="tpl-mini-line"></span>
+                  <span class="tpl-mini-line short"></span>
+                </div>
+                <span class="tpl-label">Classic</span>
+                <span class="tpl-desc">Arial · Clean rules · Traditional</span>
+              </button>
+
+              <button class="template-card" id="tpl-modern" data-template="modern" type="button">
+                <div class="tpl-preview-mini tpl-modern-mini">
+                  <span class="tpl-mini-name accent"></span>
+                  <span class="tpl-mini-accent-bar"></span>
+                  <span class="tpl-mini-line"></span>
+                  <span class="tpl-mini-line short"></span>
+                  <span class="tpl-mini-accent-bar"></span>
+                  <span class="tpl-mini-line"></span>
+                  <span class="tpl-mini-line"></span>
+                  <span class="tpl-mini-line short"></span>
+                </div>
+                <span class="tpl-label">Modern</span>
+                <span class="tpl-desc">Calibri · Accent bars · Contemporary</span>
+              </button>
+            </div>
+
+            <div class="export-actions">
+              <button class="btn export-btn export-btn-pdf" id="download-pdf-btn" type="button">
+                <span class="export-icon" aria-hidden="true">⬇</span> Download PDF
+              </button>
+              <button class="btn export-btn export-btn-docx" id="download-docx-btn" type="button">
+                <span class="export-icon" aria-hidden="true">⬇</span> Download DOCX
+              </button>
+            </div>
+            <p id="export-status" class="export-status"></p>
+          </div>
+
+          <div class="preview-pane glass-panel">
+            <div class="section-heading compact-heading">
+              <div>
+                <p class="eyebrow">LIVE PREVIEW</p>
+                <h3>How it will look</h3>
+              </div>
+              <span id="preview-loading" class="preview-loading hidden"><span class="mini-spinner"></span> Rendering…</span>
+            </div>
+            <div class="preview-frame-wrapper">
+              <iframe id="preview-iframe" class="preview-iframe" title="Resume preview" sandbox="allow-same-origin"></iframe>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer"><p>© 2026 ResumeAI</p></footer>
+  </div>
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+node_modules
+server.log
+server/*.db
+server/*.db.tmp
+.env
+.git
+.github
+*.md
