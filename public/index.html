@@ -1,51 +1,97 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="AI-powered resume builder — craft polished, tailored resumes in minutes.">
-  <title>Resume Builder</title>
+  <meta name="description" content="AI-powered resume builder — craft polished, ATS-ready resumes with live scoring, keyword targeting, and seven professional templates.">
+  <meta name="theme-color" content="#0b0c16">
+  <title>ResumeAI — Build the resume that gets the interview</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%238b5cf6'/><path d='M9 10h14M9 16h14M9 22h9' stroke='%23fff' stroke-width='2.6' stroke-linecap='round'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
+  <div class="aurora" aria-hidden="true">
+    <span class="aurora-blob aurora-1"></span>
+    <span class="aurora-blob aurora-2"></span>
+    <span class="aurora-blob aurora-3"></span>
+    <span class="aurora-grid"></span>
+  </div>
+
   <div class="app-shell">
-    <header class="header">
-      <div class="logo" aria-label="ResumeAI home">
-        <span class="logo-mark" aria-hidden="true"><i></i><i></i><i></i></span>
-        <span>ResumeAI</span>
-      </div>
-      <nav>
+    <header class="topbar">
+      <a class="logo" href="#top" aria-label="ResumeAI home">
+        <span class="logo-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="9"/><path d="M9.5 10.5h13M9.5 16h13M9.5 21.5h8" stroke-width="2.7" stroke-linecap="round"/></svg>
+        </span>
+        <span class="logo-word">Resume<em>AI</em></span>
+      </a>
+
+      <nav class="stepper" id="stepper" aria-label="Progress">
+        <button class="step is-active" type="button" data-step="upload" data-target="#upload-section">
+          <span class="step-dot">1</span><span class="step-label">Upload</span>
+        </button>
+        <span class="step-line" aria-hidden="true"></span>
+        <button class="step" type="button" data-step="edit" data-target="#editor-section" disabled>
+          <span class="step-dot">2</span><span class="step-label">Refine</span>
+        </button>
+        <span class="step-line" aria-hidden="true"></span>
+        <button class="step" type="button" data-step="tailor" data-target="#cover-letter-section" disabled>
+          <span class="step-dot">3</span><span class="step-label">Tailor</span>
+        </button>
+        <span class="step-line" aria-hidden="true"></span>
+        <button class="step" type="button" data-step="export" data-target="#export-section" disabled>
+          <span class="step-dot">4</span><span class="step-label">Export</span>
+        </button>
+      </nav>
+
+      <div class="topbar-actions">
+        <button class="icon-btn" id="theme-toggle" type="button" aria-label="Switch to light theme" title="Switch theme">
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z" stroke-width="1.7" stroke-linejoin="round"/></svg>
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="4.2" stroke-width="1.7"/><path d="M12 2.6v2.2M12 19.2v2.2M21.4 12h-2.2M4.8 12H2.6M18.6 5.4l-1.6 1.6M7 17l-1.6 1.6M18.6 18.6 17 17M7 7 5.4 5.4" stroke-width="1.7" stroke-linecap="round"/></svg>
+        </button>
         <span class="status-badge" id="status-badge">
           <span class="status-dot"></span>
-          Checking…
+          <span class="status-text">Checking…</span>
         </span>
-      </nav>
+      </div>
     </header>
 
-    <main class="main">
+    <main class="main" id="top">
       <section class="hero" id="hero">
-        <p class="eyebrow">AI RESUME WORKSPACE</p>
+        <span class="hero-pill"><span class="pill-dot"></span> AI resume workspace</span>
         <h1>Build the story that <span>gets the interview.</span></h1>
-        <p>Upload your existing resume and refine every detail with live ATS feedback.</p>
+        <p>Drop in your resume and get live ATS scoring, job-match keywords, and AI rewrites — then export it through seven recruiter-ready templates.</p>
+        <ul class="hero-stats">
+          <li><strong>7</strong><span>ATS-safe templates</span></li>
+          <li><strong>2</strong><span>Live scores</span></li>
+          <li><strong>PDF + DOCX</strong><span>One-click export</span></li>
+        </ul>
       </section>
 
-      <section class="upload-section" aria-label="Upload resume">
+      <section class="upload-section" id="upload-section" aria-label="Upload resume">
         <div class="upload-card" id="upload-card">
           <div id="drop-zone" class="drop-zone" role="button" tabindex="0" aria-label="File upload drop zone">
-            <div class="drop-zone-icon" aria-hidden="true">↥</div>
+            <div class="drop-zone-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M12 16.5V4.2M12 4.2 7.4 8.8M12 4.2l4.6 4.6" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.8 15.2v2.4a2.4 2.4 0 0 0 2.4 2.4h11.6a2.4 2.4 0 0 0 2.4-2.4v-2.4" stroke-width="1.9" stroke-linecap="round"/></svg>
+            </div>
             <p class="drop-zone-title">Drop your resume here</p>
-            <p class="drop-zone-sub">PDF or DOCX · Max 10 MB</p>
-            <label class="btn btn-outline" for="file-input" id="browse-label">Choose a file</label>
+            <p class="drop-zone-sub">PDF or DOCX · Max 10 MB · Nothing is stored on upload</p>
+            <label class="btn btn-primary" for="file-input" id="browse-label">Choose a file</label>
             <input type="file" id="file-input" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" class="visually-hidden" aria-label="Choose resume file">
           </div>
         </div>
 
         <div id="upload-progress" class="upload-state hidden" aria-live="polite">
           <div class="spinner"></div>
-          <p class="upload-state-label">Reading and organizing your resume…</p>
+          <p class="upload-state-label">Reading and organising your resume…</p>
+          <div class="skeleton-stack" aria-hidden="true">
+            <span class="skeleton" style="width:62%"></span>
+            <span class="skeleton" style="width:88%"></span>
+            <span class="skeleton" style="width:74%"></span>
+          </div>
         </div>
 
         <div id="upload-error" class="upload-state hidden" role="alert" aria-live="assertive">
@@ -60,7 +106,7 @@
       <section id="editor-section" class="editor-section hidden" aria-live="polite">
         <div class="workspace-heading">
           <div>
-            <p class="eyebrow">YOUR RESUME</p>
+            <p class="eyebrow">Step 02 — Your resume</p>
             <h2>Shape every detail.</h2>
           </div>
           <div class="workspace-actions">
@@ -71,16 +117,16 @@
 
         <div class="editor-layout">
           <div class="editor-column">
-            <section class="glass-panel job-card job-card-above" aria-label="Target job">
+            <section class="glass-panel job-card" aria-label="Target job">
               <div class="section-heading compact-heading">
                 <div>
-                  <p class="eyebrow">OPTIONAL CONTEXT</p>
+                  <p class="eyebrow">Optional context</p>
                   <h3>Target job</h3>
                 </div>
-                <span class="hint-chip">Improves match score</span>
+                <span class="hint-chip">Unlocks match score</span>
               </div>
               <label class="visually-hidden" for="job-desc">Target job description</label>
-              <textarea id="job-desc" class="job-desc-input" rows="5" placeholder="Paste the job description to check keyword alignment, highlight matched vs. missing keywords in the preview, and generate a tailored cover letter…"></textarea>
+              <textarea id="job-desc" class="job-desc-input" rows="5" placeholder="Paste the job description to check keyword alignment, highlight matched vs. missing terms in the preview, and generate a tailored cover letter…"></textarea>
             </section>
 
             <div class="editor-pane glass-panel">
@@ -89,15 +135,15 @@
                   <h3>Resume details</h3>
                   <p>Edit a field and your feedback refreshes automatically.</p>
                 </div>
-              <span id="resume-word-count" class="word-count"></span>
-            </div>
-            <form id="resume-editor" novalidate></form>
+                <span id="resume-word-count" class="word-count"></span>
+              </div>
+              <form id="resume-editor" novalidate></form>
             </div>
 
             <section class="glass-panel versions-card" aria-label="Saved versions">
               <div class="section-heading compact-heading">
                 <div>
-                  <p class="eyebrow">LIBRARY</p>
+                  <p class="eyebrow">Library</p>
                   <h3>Saved versions</h3>
                 </div>
                 <span id="versions-count" class="count-badge">—</span>
@@ -115,11 +161,55 @@
             <section class="glass-panel score-card" aria-labelledby="score-title">
               <div class="section-heading">
                 <div>
-                  <p class="eyebrow">LIVE EVALUATION</p>
+                  <p class="eyebrow">Live evaluation</p>
                   <h3 id="score-title">Resume health</h3>
                 </div>
-                <button id="analyze-btn" class="refresh-button" type="button"><span aria-hidden="true">↻</span> Refresh</button>
+                <button id="analyze-btn" class="refresh-button" type="button">
+                  <span class="refresh-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M20 12a8 8 0 1 1-2.5-5.8" stroke-width="2" stroke-linecap="round"/><path d="M20 4.4V9h-4.6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </span>
+                  <span class="refresh-label">Refresh</span>
+                </button>
               </div>
+
+              <div class="gauge-row">
+                <article class="gauge" id="ats-gauge">
+                  <div class="gauge-ring">
+                    <svg viewBox="0 0 120 120" aria-hidden="true">
+                      <circle class="gauge-track" cx="60" cy="60" r="52"></circle>
+                      <circle class="gauge-fill gauge-fill-violet" id="ats-score-bar" cx="60" cy="60" r="52"></circle>
+                    </svg>
+                    <div class="gauge-center">
+                      <strong id="ats-score-value">—</strong>
+                      <span>score</span>
+                    </div>
+                  </div>
+                  <div class="gauge-meta">
+                    <h4>ATS structure</h4>
+                    <p>Clear hierarchy, conventional sections, clean parsing.</p>
+                  </div>
+                  <span class="visually-hidden" role="progressbar" id="ats-progress" aria-label="ATS structure score" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></span>
+                </article>
+
+                <article class="gauge score-muted" id="match-gauge">
+                  <div class="gauge-ring">
+                    <svg viewBox="0 0 120 120" aria-hidden="true">
+                      <circle class="gauge-track" cx="60" cy="60" r="52"></circle>
+                      <circle class="gauge-fill gauge-fill-coral" id="match-score-bar" cx="60" cy="60" r="52"></circle>
+                    </svg>
+                    <div class="gauge-center">
+                      <strong id="match-score-value">—</strong>
+                      <span>match</span>
+                    </div>
+                  </div>
+                  <div class="gauge-meta">
+                    <h4>Job match</h4>
+                    <p id="match-score-note">Add a target job to measure keyword alignment.</p>
+                  </div>
+                  <span class="visually-hidden" role="progressbar" id="match-progress" aria-label="Job match score" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></span>
+                </article>
+              </div>
+
               <p id="analysis-status" class="analysis-status">Preparing your workspace…</p>
               <div id="analysis-progress" class="analysis-loading hidden" aria-live="polite">
                 <span class="mini-spinner"></span> Re-evaluating your resume…
@@ -127,20 +217,9 @@
               <div id="analysis-error" class="analysis-inline-error hidden" role="alert">
                 <span aria-hidden="true">!</span><span id="analysis-error-message"></span>
               </div>
-              <div class="score-list">
-                <article class="score-row">
-                  <div class="score-label-row"><span>ATS structure</span><strong id="ats-score-value">—</strong></div>
-                  <div class="score-track" role="progressbar" aria-label="ATS structure score" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="ats-score-bar" class="score-fill score-fill-violet"></span></div>
-                  <p>Clear hierarchy, conventional sections, and easy parsing.</p>
-                </article>
-                <article class="score-row">
-                  <div class="score-label-row"><span>Job match</span><strong id="match-score-value">—</strong></div>
-                  <div class="score-track" role="progressbar" aria-label="Job match score" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="match-score-bar" class="score-fill score-fill-coral"></span></div>
-                  <p id="match-score-note">Add a target job to measure keyword alignment.</p>
-                </article>
-              </div>
+
               <div id="missing-keywords" class="missing-keywords hidden">
-                <p>Keywords to consider</p>
+                <p>Keywords from the job description</p>
                 <div id="keyword-list" class="keyword-list"></div>
               </div>
             </section>
@@ -148,7 +227,7 @@
             <section class="glass-panel insight-card" aria-labelledby="issues-title">
               <div class="section-heading">
                 <div>
-                  <p class="eyebrow">PARSING CHECK</p>
+                  <p class="eyebrow">Parsing check</p>
                   <h3 id="issues-title">Structure issues</h3>
                 </div>
                 <span id="issue-count" class="count-badge">—</span>
@@ -159,7 +238,7 @@
             <section class="glass-panel insight-card suggestions-card" aria-labelledby="suggestions-title">
               <div class="section-heading">
                 <div>
-                  <p class="eyebrow">CONTENT UPGRADE</p>
+                  <p class="eyebrow">Content upgrade</p>
                   <h3 id="suggestions-title">Rewrite suggestions</h3>
                 </div>
                 <span id="suggestion-count" class="count-badge">—</span>
@@ -173,26 +252,31 @@
       <section id="cover-letter-section" class="export-section hidden" aria-label="Cover letter">
         <div class="workspace-heading">
           <div>
-            <p class="eyebrow">TAILORED PITCH</p>
+            <p class="eyebrow">Step 03 — Tailored pitch</p>
             <h2>Cover letter.</h2>
           </div>
         </div>
 
-        <div class="cover-letter-layout">
+        <div class="split-layout">
           <div class="template-picker glass-panel">
             <div class="section-heading compact-heading">
               <div>
-                <p class="eyebrow">DRAFT</p>
+                <p class="eyebrow">Draft</p>
                 <h3>Your letter</h3>
               </div>
-              <span class="hint-chip" id="cover-letter-mode" hidden>Fallback draft</span>
+              <span class="hint-chip warn" id="cover-letter-mode" hidden>Fallback draft</span>
             </div>
             <p class="cover-letter-hint">Generated from your resume and the target job description. Edit freely — the preview updates as you type.</p>
             <textarea id="cover-letter-input" class="job-desc-input cover-letter-input" rows="14" placeholder="Click “Generate draft” to create a tailored cover letter, or start writing your own…"></textarea>
             <div class="export-actions">
-              <button class="btn export-btn export-btn-pdf" id="generate-letter-btn" type="button">✨ Generate draft</button>
-              <button class="btn export-btn export-btn-docx" id="download-letter-btn" type="button" disabled>
-                <span class="export-icon" aria-hidden="true">⬇</span> Download PDF
+              <button class="btn export-btn export-btn-pdf" id="generate-letter-btn" type="button">
+                <span class="export-icon" aria-hidden="true">✦</span> Generate draft
+              </button>
+              <button class="btn export-btn export-btn-outline" id="download-letter-btn" type="button" disabled>
+                <span class="export-icon" aria-hidden="true">↓</span> PDF
+              </button>
+              <button class="btn export-btn export-btn-outline" id="download-letter-docx-btn" type="button" disabled>
+                <span class="export-icon" aria-hidden="true">↓</span> DOCX
               </button>
             </div>
             <p id="cover-letter-status" class="export-status"></p>
@@ -201,7 +285,7 @@
           <div class="preview-pane glass-panel">
             <div class="section-heading compact-heading">
               <div>
-                <p class="eyebrow">LIVE PREVIEW</p>
+                <p class="eyebrow">Live preview</p>
                 <h3>How it will look</h3>
               </div>
               <span id="cover-letter-preview-loading" class="preview-loading hidden"><span class="mini-spinner"></span> Rendering…</span>
@@ -216,58 +300,33 @@
       <section id="export-section" class="export-section hidden" aria-label="Export resume">
         <div class="workspace-heading">
           <div>
-            <p class="eyebrow">EXPORT</p>
+            <p class="eyebrow">Step 04 — Export</p>
             <h2>Pick a template &amp; download.</h2>
           </div>
+          <span class="hint-chip ok" id="template-count-chip">7 ATS-safe templates</span>
         </div>
 
-        <div class="export-layout">
+        <div class="split-layout">
           <div class="template-picker glass-panel">
             <div class="section-heading compact-heading">
               <div>
-                <p class="eyebrow">TEMPLATE</p>
+                <p class="eyebrow">Template</p>
                 <h3>Choose a style</h3>
               </div>
             </div>
 
-            <div class="template-options">
-              <button class="template-card active" id="tpl-classic" data-template="classic" type="button">
-                <div class="tpl-preview-mini tpl-classic-mini">
-                  <span class="tpl-mini-name"></span>
-                  <span class="tpl-mini-bar"></span>
-                  <span class="tpl-mini-line"></span>
-                  <span class="tpl-mini-line short"></span>
-                  <span class="tpl-mini-bar"></span>
-                  <span class="tpl-mini-line"></span>
-                  <span class="tpl-mini-line"></span>
-                  <span class="tpl-mini-line short"></span>
-                </div>
-                <span class="tpl-label">Classic</span>
-                <span class="tpl-desc">Arial · Clean rules · Traditional</span>
-              </button>
-
-              <button class="template-card" id="tpl-modern" data-template="modern" type="button">
-                <div class="tpl-preview-mini tpl-modern-mini">
-                  <span class="tpl-mini-name accent"></span>
-                  <span class="tpl-mini-accent-bar"></span>
-                  <span class="tpl-mini-line"></span>
-                  <span class="tpl-mini-line short"></span>
-                  <span class="tpl-mini-accent-bar"></span>
-                  <span class="tpl-mini-line"></span>
-                  <span class="tpl-mini-line"></span>
-                  <span class="tpl-mini-line short"></span>
-                </div>
-                <span class="tpl-label">Modern</span>
-                <span class="tpl-desc">Calibri · Accent bars · Contemporary</span>
-              </button>
+            <div class="template-gallery" id="template-gallery" role="radiogroup" aria-label="Resume template">
+              <div class="gallery-loading"><span class="mini-spinner"></span> Loading templates…</div>
             </div>
+
+            <p class="template-note" id="template-note"></p>
 
             <div class="export-actions">
               <button class="btn export-btn export-btn-pdf" id="download-pdf-btn" type="button">
-                <span class="export-icon" aria-hidden="true">⬇</span> Download PDF
+                <span class="export-icon" aria-hidden="true">↓</span> Download PDF
               </button>
               <button class="btn export-btn export-btn-docx" id="download-docx-btn" type="button">
-                <span class="export-icon" aria-hidden="true">⬇</span> Download DOCX
+                <span class="export-icon" aria-hidden="true">↓</span> Download DOCX
               </button>
             </div>
             <p id="export-status" class="export-status"></p>
@@ -276,7 +335,7 @@
           <div class="preview-pane glass-panel">
             <div class="section-heading compact-heading">
               <div>
-                <p class="eyebrow">LIVE PREVIEW</p>
+                <p class="eyebrow">Live preview</p>
                 <h3>How it will look</h3>
               </div>
               <span id="preview-loading" class="preview-loading hidden"><span class="mini-spinner"></span> Rendering…</span>
@@ -284,13 +343,17 @@
             <div class="preview-frame-wrapper">
               <iframe id="preview-iframe" class="preview-iframe" title="Resume preview" sandbox="allow-same-origin"></iframe>
             </div>
+            <div id="preview-keyword-legend" class="matched-legend hidden"></div>
           </div>
         </div>
       </section>
     </main>
 
-    <footer class="footer"><p>© 2026 ResumeAI</p></footer>
+    <footer class="footer">
+      <p>© 2026 ResumeAI · Every template is single-column and ATS-safe.</p>
+    </footer>
   </div>
+
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
   <script src="/app.js"></script>
 </body>

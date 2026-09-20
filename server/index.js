@@ -13,14 +13,17 @@ const versionsRouter = require('./api/versions');
 
 const app = express();
 
-// Guard against invalid PORT values (0, empty, non-numeric). On Render/Railway
-// the platform injects PORT; locally .env supplies it.
+// Guard against invalid PORT values (empty, non-numeric, out of range). On
+// Render/Railway the platform injects PORT; locally .env supplies it.
+const DEFAULT_PORT = 3000;
+
 function resolvePort() {
   const raw = String(process.env.PORT ?? '').trim();
+  if (!raw) return DEFAULT_PORT;
   const parsed = Number(raw);
-  if (Number.isInteger(parsed) && parsed >= 1024 && parsed <= 65535) return parsed;
-  if (raw === '0' && process.env.NODE_ENV !== 'production') return 3000;
-  return 3000;
+  if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 65535) return parsed;
+  console.warn(`[server] Ignoring invalid PORT "${raw}" — falling back to ${DEFAULT_PORT}.`);
+  return DEFAULT_PORT;
 }
 
 const PORT = resolvePort();
@@ -37,6 +40,11 @@ app.use('/api/structure-resume', structureResumeRouter);
 app.use('/api/export', exportRouter);
 app.use('/api/cover-letter', coverLetterRouter);
 app.use('/api/versions', versionsRouter);
+
+// --- Unknown API routes: JSON 404, never the SPA shell ---
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: `No such API endpoint: ${req.method} /api${req.path}` });
+});
 
 // --- Error Handling Middleware ---
 app.use((err, req, res, next) => {
@@ -67,6 +75,15 @@ app.get('*', (_req, res) => {
   });
 })();
 
-// --- Graceful shutdown: flush SQLite to disk ---
-process.on('SIGTERM', () => { flushOnExit(); process.exit(0); });
-process.on('SIGINT', () => { flushOnExit(); process.exit(0); });
+// --- Graceful shutdown: flush SQLite, close the shared Chromium instance ---
+let shuttingDown = false;
+async function shutdown() {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  flushOnExit();
+  try { await exportRouter.closeBrowser(); } catch { /* best effort */ }
+  process.exit(0);
+}
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);

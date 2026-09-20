@@ -84,7 +84,7 @@ function buildFallbackAnalysis(resumeText, jobDescription) {
   const hasSkills = hasSection(text, ['skills', 'technical skills', 'core competencies']);
   const hasEmail = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(text);
   const hasPhone = /(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/.test(text);
-  const hasDates = /(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)?\\.?\\s*20\\d{2}\s*(?:-|–|—|to)\s*(?:present|current|20\\d{2})/i.test(text);
+  const hasDates = /(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)?\.?\s*(?:19|20)\d{2}\s*(?:-|–|—|to)\s*(?:present|current|(?:19|20)\d{2})/i.test(text);
   const hasMetrics = /(?:\d+%|\$\s?\d+|\d+[+x]|\d+\s*(?:users|customers|hours|days|weeks|months|projects|people|team members))/i.test(text);
   const hasRecognizableYear = /\b(?:19|20)\d{2}\b/.test(text);
 

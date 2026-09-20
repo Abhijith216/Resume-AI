@@ -2,7 +2,14 @@
   'use strict';
 
   const $ = (selector) => document.querySelector(selector);
+
+  // --- Shell ---
   const badge = $('#status-badge');
+  const themeToggle = $('#theme-toggle');
+  const stepper = $('#stepper');
+  const toastContainer = $('#toast-container');
+
+  // --- Upload ---
   const uploadCard = $('#upload-card');
   const dropZone = $('#drop-zone');
   const fileInput = $('#file-input');
@@ -10,20 +17,29 @@
   const uploadError = $('#upload-error');
   const errorMessage = $('#error-message');
   const retryBtn = $('#retry-btn');
+  const hero = $('#hero');
+
+  // --- Editor ---
   const editorSection = $('#editor-section');
   const resumeEditor = $('#resume-editor');
   const jobDescInput = $('#job-desc');
   const clearBtn = $('#clear-btn');
+  const resumeWordCount = $('#resume-word-count');
+
+  // --- Analysis ---
   const analyzeBtn = $('#analyze-btn');
   const analysisProgress = $('#analysis-progress');
   const analysisError = $('#analysis-error');
   const analysisErrorMessage = $('#analysis-error-message');
   const analysisStatus = $('#analysis-status');
-  const resumeWordCount = $('#resume-word-count');
+  const atsGauge = $('#ats-gauge');
+  const matchGauge = $('#match-gauge');
   const atsScoreValue = $('#ats-score-value');
   const matchScoreValue = $('#match-score-value');
   const atsScoreBar = $('#ats-score-bar');
   const matchScoreBar = $('#match-score-bar');
+  const atsProgress = $('#ats-progress');
+  const matchProgress = $('#match-progress');
   const matchScoreNote = $('#match-score-note');
   const missingKeywords = $('#missing-keywords');
   const keywordList = $('#keyword-list');
@@ -32,36 +48,40 @@
   const suggestionCount = $('#suggestion-count');
   const rewriteSuggestions = $('#rewrite-suggestions');
 
-  // Export elements
+  // --- Export ---
   const exportSection = $('#export-section');
-  const tplClassicBtn = $('#tpl-classic');
-  const tplModernBtn = $('#tpl-modern');
+  const templateGallery = $('#template-gallery');
+  const templateNote = $('#template-note');
+  const templateCountChip = $('#template-count-chip');
   const downloadPdfBtn = $('#download-pdf-btn');
   const downloadDocxBtn = $('#download-docx-btn');
   const exportStatus = $('#export-status');
   const previewIframe = $('#preview-iframe');
   const previewLoading = $('#preview-loading');
+  const previewLegend = $('#preview-keyword-legend');
 
-  // Cover letter elements
+  // --- Cover letter ---
   const coverLetterSection = $('#cover-letter-section');
   const coverLetterInput = $('#cover-letter-input');
   const generateLetterBtn = $('#generate-letter-btn');
   const downloadLetterBtn = $('#download-letter-btn');
+  const downloadLetterDocxBtn = $('#download-letter-docx-btn');
   const coverLetterStatus = $('#cover-letter-status');
   const coverLetterMode = $('#cover-letter-mode');
   const coverLetterPreviewIframe = $('#cover-letter-preview-iframe');
   const coverLetterPreviewLoading = $('#cover-letter-preview-loading');
 
-  // Saved versions elements
+  // --- Saved versions ---
   const versionsList = $('#versions-list');
   const versionsCount = $('#versions-count');
   const versionNameInput = $('#version-name');
   const saveVersionBtn = $('#save-version-btn');
   const updateVersionBtn = $('#update-version-btn');
-  const toastContainer = $('#toast-container');
 
   const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
   const ALLOWED_EXTS = ['.pdf', '.docx'];
+  const THEME_KEY = 'resumeai-theme';
+  const GAUGE_CIRCUMFERENCE = 2 * Math.PI * 52; // matches r="52" in the markup
   const CONTACT_FIELDS = [
     ['name', 'Full name', 'e.g. Taylor Morgan'],
     ['title', 'Professional title', 'e.g. Product Designer'],
@@ -78,7 +98,9 @@
   let analysisController = null;
 
   // Export state
+  let templates = [];
   let selectedTemplate = 'classic';
+  let defaultTemplate = 'classic';
   let previewDebounceTimer = null;
   let previewController = null;
 
@@ -140,7 +162,82 @@
     return cleaned;
   }
 
+  /** Parse a JSON body, tolerating empty or non-JSON error responses. */
+  async function readJson(response) {
+    try {
+      return await response.json();
+    } catch {
+      return {};
+    }
+  }
+
+  // ===== Theme =====
+
+  function applyTheme(theme) {
+    const next = theme === 'light' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    themeToggle.setAttribute('aria-label', `Switch to ${next === 'light' ? 'dark' : 'light'} theme`);
+    try { localStorage.setItem(THEME_KEY, next); } catch { /* storage may be blocked */ }
+  }
+
+  function initTheme() {
+    let stored = null;
+    try { stored = localStorage.getItem(THEME_KEY); } catch { /* ignore */ }
+    if (stored) return applyTheme(stored);
+    const prefersLight = window.matchMedia?.('(prefers-color-scheme: light)').matches;
+    applyTheme(prefersLight ? 'light' : 'dark');
+  }
+
+  // ===== Stepper =====
+
+  function setStepState(stepName, { enabled, active, done } = {}) {
+    const step = stepper.querySelector(`[data-step="${stepName}"]`);
+    if (!step) return;
+    if (enabled !== undefined) step.disabled = !enabled;
+    if (active !== undefined) step.classList.toggle('is-active', active);
+    if (done !== undefined) step.classList.toggle('is-done', done);
+  }
+
+  function activateStep(stepName) {
+    stepper.querySelectorAll('.step').forEach((step) => {
+      step.classList.toggle('is-active', step.dataset.step === stepName);
+    });
+  }
+
+  /** Unlock steps 2–4 once a resume is loaded into the workspace. */
+  function unlockWorkspaceSteps() {
+    ['edit', 'tailor', 'export'].forEach((name) => setStepState(name, { enabled: true }));
+    setStepState('upload', { done: true });
+    activateStep('edit');
+  }
+
+  function lockWorkspaceSteps() {
+    ['edit', 'tailor', 'export'].forEach((name) => setStepState(name, { enabled: false, done: false, active: false }));
+    setStepState('upload', { enabled: true, done: false, active: true });
+  }
+
+  function observeSections() {
+    if (!('IntersectionObserver' in window)) return;
+    const map = new Map([
+      ['upload-section', 'upload'],
+      ['editor-section', 'edit'],
+      ['cover-letter-section', 'tailor'],
+      ['export-section', 'export'],
+    ]);
+    const observer = new IntersectionObserver((entries) => {
+      const visible = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (visible) activateStep(map.get(visible.target.id));
+    }, { rootMargin: '-40% 0px -50% 0px', threshold: [0, 0.2, 0.6] });
+    map.forEach((_name, id) => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+  }
+
   // ===== Toasts =====
+
   function showToast(message, type = 'info', { duration = 4500 } = {}) {
     if (!message) return;
     const toast = document.createElement('div');
@@ -152,12 +249,12 @@
     setTimeout(() => {
       toast.classList.add('toast-out');
       toast.addEventListener('animationend', () => toast.remove(), { once: true });
-      // Fallback removal if animations are unavailable
       setTimeout(() => toast.remove(), 400);
     }, duration);
   }
 
   // ===== Loading + error handling for API calls =====
+
   let activeLoaders = 0;
   function setGlobalLoading(on) {
     activeLoaders = Math.max(0, activeLoaders + (on ? 1 : -1));
@@ -203,18 +300,23 @@
   }
 
   async function checkHealth() {
+    const text = badge.querySelector('.status-text');
     try {
       const response = await fetch('/api/health');
-      const data = await response.json();
+      const data = await readJson(response);
       if (!response.ok || data.status !== 'ok') throw new Error('Offline');
-      badge.innerHTML = '<span class="status-dot"></span> API online';
+      text.textContent = 'API online';
       badge.classList.add('online');
+      badge.classList.remove('offline');
     } catch {
-      badge.innerHTML = '<span class="status-dot"></span> API offline';
+      text.textContent = 'API offline';
       badge.classList.add('offline');
+      badge.classList.remove('online');
       showToast('API offline — the server is not reachable.', 'error');
     }
   }
+
+  // ===== Editor rendering =====
 
   function renderEditor() {
     resumeEditor.innerHTML = `
@@ -350,6 +452,8 @@
     return rows.join('\n\n');
   }
 
+  // ===== Analysis =====
+
   function scheduleAnalysis({ immediately = false } = {}) {
     clearTimeout(debounceTimer);
     // Do not allow a score calculated for an earlier edit to flash into view
@@ -375,7 +479,8 @@
   function setAnalysisLoading(isLoading) {
     analysisProgress.classList.toggle('hidden', !isLoading);
     analyzeBtn.disabled = isLoading;
-    analyzeBtn.innerHTML = isLoading ? '<span class="refresh-spin" aria-hidden="true">↻</span> Checking' : '<span aria-hidden="true">↻</span> Refresh';
+    analyzeBtn.classList.toggle('is-busy', isLoading);
+    analyzeBtn.querySelector('.refresh-label').textContent = isLoading ? 'Checking' : 'Refresh';
   }
 
   async function runAnalysis() {
@@ -400,7 +505,7 @@
         body: JSON.stringify(analysisPayload()),
         signal: analysisController.signal,
       });
-      const data = await response.json();
+      const data = await readJson(response);
       if (serial !== requestSerial) return;
       if (!response.ok) throw new Error(data.error || `Analysis request failed with status ${response.status}`);
       analysis = data;
@@ -425,26 +530,34 @@
     const matchRaw = analysis?.content_match_score;
     const hasMatchScore = typeof matchRaw === 'number' && Number.isFinite(matchRaw);
     const matchScore = hasMatchScore ? clampScore(matchRaw) : 0;
-    updateScore(atsScoreBar, atsScoreValue, atsScore, 'ATS structure score');
-    updateScore(matchScoreBar, matchScoreValue, matchScore, 'Job match score', !hasMatchScore);
+
+    updateGauge(atsGauge, atsScoreBar, atsScoreValue, atsProgress, atsScore, false);
+    updateGauge(matchGauge, matchScoreBar, matchScoreValue, matchProgress, matchScore, !hasMatchScore);
+
     matchScoreNote.textContent = hasMatchScore
       ? 'Alignment of skills, language, and experience with the target role.'
       : 'Add a target job to measure keyword alignment.';
+
     renderKeywords(analysis?.missing_keywords || [], analysis?.matched_keywords || []);
     renderStructureIssues(analysis?.structure_issues || []);
     renderSuggestions(analysis?.rewrite_suggestions || []);
+    renderPreviewLegend();
+    // New keywords change what the preview highlights, so re-render it.
+    schedulePreviewUpdate();
   }
 
   function clampScore(value) {
     return Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
   }
 
-  function updateScore(bar, label, score, ariaLabel, muted = false) {
-    requestAnimationFrame(() => { bar.style.width = `${score}%`; });
-    label.textContent = muted ? '—' : `${score}%`;
-    bar.closest('.score-track').setAttribute('aria-valuenow', String(score));
-    bar.closest('.score-track').setAttribute('aria-label', ariaLabel);
-    bar.closest('.score-row').classList.toggle('score-muted', muted);
+  function updateGauge(gaugeEl, circle, label, progressEl, score, muted) {
+    const offset = muted ? GAUGE_CIRCUMFERENCE : GAUGE_CIRCUMFERENCE * (1 - score / 100);
+    requestAnimationFrame(() => { circle.style.strokeDashoffset = String(offset); });
+    label.textContent = muted ? '—' : String(score);
+    progressEl.setAttribute('aria-valuenow', String(muted ? 0 : score));
+    gaugeEl.classList.toggle('score-muted', muted);
+    gaugeEl.classList.toggle('is-strong', !muted && score >= 75);
+    gaugeEl.classList.toggle('is-weak', !muted && score < 50);
   }
 
   function renderKeywords(missing, matched) {
@@ -452,11 +565,9 @@
     const matchedCleaned = Array.isArray(matched) ? matched.filter(Boolean).slice(0, 12) : [];
     const hasAny = missingCleaned.length > 0 || matchedCleaned.length > 0;
     missingKeywords.classList.toggle('hidden', !hasAny);
-    keywordList.innerHTML = missingCleaned.map((keyword) => `<span>${escapeHtml(keyword)}</span>`).join('') +
+    keywordList.innerHTML =
+      missingCleaned.map((keyword) => `<span title="Missing from your resume">${escapeHtml(keyword)}</span>`).join('') +
       matchedCleaned.map((keyword) => `<span class="kw-matched" title="Already present in your resume">${escapeHtml(keyword)}</span>`).join('');
-    // Update the section label to describe the two groups
-    const label = missingKeywords.querySelector('p');
-    if (label) label.textContent = 'Keywords from the job description';
   }
 
   function renderStructureIssues(issues) {
@@ -476,7 +587,7 @@
     const cleaned = Array.isArray(suggestions) ? suggestions : [];
     suggestionCount.textContent = cleaned.length ? String(cleaned.length) : '—';
     if (!cleaned.length) {
-      rewriteSuggestions.innerHTML = 'No rewrites surfaced yet. Keep building, then refresh your analysis.';
+      rewriteSuggestions.innerHTML = '<div class="empty-insight">No rewrites surfaced yet. Keep building, then refresh your analysis.</div>';
       return;
     }
     rewriteSuggestions.innerHTML = `<div class="suggestion-list">${cleaned.map((item, index) => {
@@ -531,12 +642,15 @@
       targetInput.classList.add('field-applied');
       targetInput.focus({ preventScroll: true });
       targetInput.closest('.editor-group').scrollIntoView({ behavior: 'smooth', block: 'center' });
-      setTimeout(() => targetInput.classList.remove('field-applied'), 1200);
+      setTimeout(() => targetInput.classList.remove('field-applied'), 1300);
     }
     renderSuggestions(analysis.rewrite_suggestions);
+    showToast('Rewrite applied.', 'success', { duration: 2500 });
     scheduleAnalysis();
     schedulePreviewUpdate();
   }
+
+  // ===== Upload =====
 
   async function structureResume(rawText) {
     const response = await fetch('/api/structure-resume', {
@@ -544,11 +658,9 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: rawText }),
     });
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      throw new Error(data.error || 'Could not organize the extracted resume.');
-    }
-    return response.json();
+    const data = await readJson(response);
+    if (!response.ok) throw new Error(data.error || 'Could not organise the extracted resume.');
+    return data;
   }
 
   async function handleFile(file) {
@@ -568,12 +680,13 @@
     uploadCard.classList.add('hidden');
     editorSection.classList.add('hidden');
     exportSection.classList.add('hidden');
+    coverLetterSection.classList.add('hidden');
     uploadProgress.classList.remove('hidden');
     try {
       const formData = new FormData();
       formData.append('resume', file);
       const parseResponse = await fetch('/api/parse-resume', { method: 'POST', body: formData });
-      const parsed = await parseResponse.json();
+      const parsed = await readJson(parseResponse);
       if (!parseResponse.ok) throw new Error(parsed.error || 'The file could not be read.');
       const structured = await structureResume(parsed.text);
       resume = normaliseResume(structured);
@@ -581,18 +694,18 @@
       coverLetter = '';
       coverLetterInput.value = '';
       coverLetterPreviewIframe.srcdoc = '';
-      downloadLetterBtn.disabled = true;
+      setCoverLetterDownloadsEnabled(false);
       coverLetterMode.hidden = true;
       loadedVersionId = null;
       updateVersionBtn.classList.add('hidden');
       renderEditor();
       resetInsightPlaceholders();
-      editorSection.classList.remove('hidden');
-      exportSection.classList.remove('hidden');
+      revealWorkspace();
       setAnalysisStatus('Your resume is ready — running the first evaluation…');
       scheduleAnalysis({ immediately: true });
       schedulePreviewUpdate({ immediately: true });
       refreshVersions();
+      showToast('Resume imported. Review the fields below.', 'success', { duration: 3200 });
     } catch (error) {
       showUploadError(error.message || 'Unable to prepare that resume. Please try another file.');
     } finally {
@@ -601,39 +714,28 @@
     }
   }
 
+  /** Reveal every workspace section — editor, cover letter, and export. */
+  function revealWorkspace() {
+    hero.classList.add('hidden');
+    editorSection.classList.remove('hidden');
+    coverLetterSection.classList.remove('hidden');
+    exportSection.classList.remove('hidden');
+    unlockWorkspaceSteps();
+  }
+
   function resetInsightPlaceholders() {
-    atsScoreValue.textContent = '—';
-    matchScoreValue.textContent = '—';
-    atsScoreBar.style.width = '0%';
-    matchScoreBar.style.width = '0%';
+    updateGauge(atsGauge, atsScoreBar, atsScoreValue, atsProgress, 0, true);
+    updateGauge(matchGauge, matchScoreBar, matchScoreValue, matchProgress, 0, true);
     matchScoreNote.textContent = 'Add a target job to measure keyword alignment.';
     missingKeywords.classList.add('hidden');
     keywordList.innerHTML = '';
     issueCount.textContent = '—';
     issueCount.classList.remove('is-clear');
     suggestionCount.textContent = '—';
-    structureIssues.textContent = 'Run an analysis to uncover anything that could confuse an ATS.';
-    rewriteSuggestions.textContent = 'Suggestions will appear here after your first analysis.';
-  }
-
-  function renderPreviewKeywords() {
-    const matched = analysis?.matched_keywords || [];
-    const missing = analysis?.missing_keywords || [];
-    const legend = document.getElementById('preview-keyword-legend');
-    if (legend) legend.remove();
-    if (!matched.length && !missing.length) {
-      schedulePreviewUpdate();
-      return;
-    }
-    const wrapper = previewIframe.closest('.preview-frame-wrapper');
-    const el = document.createElement('div');
-    el.id = 'preview-keyword-legend';
-    el.className = 'matched-legend';
-    el.innerHTML =
-      (missing.length ? `<span><span class="legend-swatch legend-missed"></span> Missing: ${escapeHtml(missing.slice(0, 8).join(', '))}</span>` : '') +
-      (matched.length ? `<span><span class="legend-swatch legend-matched"></span> Matched: ${escapeHtml(matched.slice(0, 8).join(', '))}</span>` : '');
-    wrapper.appendChild(el);
-    schedulePreviewUpdate();
+    structureIssues.innerHTML = '<div class="empty-insight">Run an analysis to uncover anything that could confuse an ATS.</div>';
+    rewriteSuggestions.innerHTML = '<div class="empty-insight">Suggestions will appear here after your first analysis.</div>';
+    previewLegend.classList.add('hidden');
+    previewLegend.innerHTML = '';
   }
 
   function resetState() {
@@ -647,6 +749,8 @@
     analysis = null;
     coverLetter = '';
     loadedVersionId = null;
+    selectedTemplate = defaultTemplate;
+    renderTemplateGallery();
     updateVersionBtn.classList.add('hidden');
     versionNameInput.value = '';
     jobDescInput.value = '';
@@ -656,20 +760,130 @@
     uploadProgress.classList.add('hidden');
     analysisError.classList.add('hidden');
     analysisProgress.classList.add('hidden');
+    hero.classList.remove('hidden');
     uploadCard.classList.remove('hidden');
     editorSection.classList.add('hidden');
     exportSection.classList.add('hidden');
     coverLetterSection.classList.add('hidden');
     resetInsightPlaceholders();
+    setAnalysisStatus('Preparing your workspace…');
     exportStatus.textContent = '';
     exportStatus.classList.remove('is-error');
     previewIframe.srcdoc = '';
     coverLetterPreviewIframe.srcdoc = '';
     coverLetterMode.hidden = true;
+    setCoverLetterDownloadsEnabled(false);
     setCoverLetterStatus('');
+    lockWorkspaceSteps();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  // ===== Export / Preview Functions =====
+  // ===== Template gallery =====
+
+  /** Miniature page mock-up markup for a template variant. */
+  function miniMarkup(variant) {
+    const line = '<i></i>';
+    const short = '<i class="s"></i>';
+    const head = '<span class="m-head"></span>';
+    const rule = '<span class="m-rule"></span>';
+    const name = '<span class="m-name"></span>';
+    const sub = '<span class="m-sub"></span>';
+
+    switch (variant) {
+      case 'bars':
+        return `${name}${sub}${head}${line}${short}${head}${line}${line}${short}`;
+      case 'centred':
+        return `${name}${sub}${rule}${head}${line}${short}${head}${line}${line}`;
+      case 'airy':
+        return `${name}${sub}${head}${line}${short}${head}${line}${line}`;
+      case 'chips':
+        return `${name}${sub}${rule}${head}<span class="m-chips"><b></b><b></b><b></b><b></b><b></b></span>${head}${line}${short}`;
+      case 'band':
+        return `<span class="m-band">${name}${sub}</span>${head}${line}${short}${head}${line}${line}`;
+      case 'dense':
+        return `${name}${sub}${rule}${head}${line}${line}${short}${head}${line}${line}${line}${short}`;
+      case 'ruled':
+      default:
+        return `${name}${sub}${rule}${head}${line}${short}${rule}${head}${line}${line}${short}`;
+    }
+  }
+
+  function renderTemplateGallery() {
+    if (!templates.length) return;
+    templateGallery.innerHTML = templates.map((tpl) => `
+      <button class="tpl-card${tpl.key === selectedTemplate ? ' active' : ''}" type="button"
+              role="radio" aria-checked="${tpl.key === selectedTemplate}"
+              data-template="${escapeHtml(tpl.key)}" title="${escapeHtml(tpl.bestFor)}">
+        <span class="tpl-thumb-wrap">
+          <span class="tpl-check" aria-hidden="true">✓</span>
+          <span class="mini" data-variant="${escapeHtml(tpl.variant)}" style="--accent:${escapeHtml(tpl.accent)}">${miniMarkup(tpl.variant)}</span>
+        </span>
+        <span class="tpl-label">${escapeHtml(tpl.name)}</span>
+        <span class="tpl-desc">${escapeHtml(tpl.tagline)}</span>
+      </button>`).join('');
+    updateTemplateNote();
+  }
+
+  function updateTemplateNote() {
+    const tpl = templates.find((item) => item.key === selectedTemplate);
+    templateNote.innerHTML = tpl
+      ? `<strong>${escapeHtml(tpl.name)}</strong> — ${escapeHtml(tpl.bestFor)}`
+      : '';
+  }
+
+  async function loadTemplates() {
+    try {
+      const response = await fetch('/api/export/templates');
+      const data = await readJson(response);
+      if (!response.ok || !Array.isArray(data.templates) || !data.templates.length) {
+        throw new Error(data.error || 'Could not load templates.');
+      }
+      templates = data.templates;
+      defaultTemplate = data.default || templates[0].key;
+      if (!templates.some((t) => t.key === selectedTemplate)) selectedTemplate = defaultTemplate;
+      templateCountChip.textContent = `${templates.length} ATS-safe templates`;
+      renderTemplateGallery();
+    } catch (error) {
+      console.error('[templates]', error);
+      templateGallery.innerHTML = '<div class="gallery-loading">Templates could not be loaded. Refresh the page to try again.</div>';
+    }
+  }
+
+  function selectTemplate(templateKey) {
+    if (!templates.some((tpl) => tpl.key === templateKey)) return;
+    selectedTemplate = templateKey;
+    templateGallery.querySelectorAll('.tpl-card').forEach((card) => {
+      const isActive = card.dataset.template === templateKey;
+      card.classList.toggle('active', isActive);
+      card.setAttribute('aria-checked', String(isActive));
+    });
+    updateTemplateNote();
+    schedulePreviewUpdate({ immediately: true });
+  }
+
+  // ===== Preview =====
+
+  /** Keywords in the shape the export API expects: { matched, missing }. */
+  function keywordsPayload() {
+    const matched = analysis?.matched_keywords || [];
+    const missing = analysis?.missing_keywords || [];
+    if (!matched.length && !missing.length) return null;
+    return { matched, missing };
+  }
+
+  function renderPreviewLegend() {
+    const matched = analysis?.matched_keywords || [];
+    const missing = analysis?.missing_keywords || [];
+    if (!matched.length && !missing.length) {
+      previewLegend.classList.add('hidden');
+      previewLegend.innerHTML = '';
+      return;
+    }
+    previewLegend.innerHTML =
+      (missing.length ? `<span><span class="legend-swatch legend-missed"></span> Missing: ${escapeHtml(missing.slice(0, 8).join(', '))}</span>` : '') +
+      (matched.length ? `<span><span class="legend-swatch legend-matched"></span> Matched: ${escapeHtml(matched.slice(0, 8).join(', '))}</span>` : '');
+    previewLegend.classList.remove('hidden');
+  }
 
   function schedulePreviewUpdate({ immediately = false } = {}) {
     clearTimeout(previewDebounceTimer);
@@ -681,8 +895,7 @@
   }
 
   async function updatePreview() {
-    const resumeText = resumeToText();
-    if (!resumeText.trim()) return;
+    if (!resumeToText().trim()) return;
 
     if (previewController) previewController.abort();
     previewController = new AbortController();
@@ -690,18 +903,19 @@
 
     try {
       const payload = { resume, template: selectedTemplate };
-      if (analysis && ((analysis.matched_keywords || []).length || (analysis.missing_keywords || []).length)) {
-        payload.keywords = [...(analysis.matched_keywords || []), ...(analysis.missing_keywords || [])];
-      }
+      const keywords = keywordsPayload();
+      if (keywords) payload.keywords = keywords;
       const response = await fetch('/api/export/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
         signal: previewController.signal,
       });
-      if (!response.ok) throw new Error('Preview failed');
-      const html = await response.text();
-      previewIframe.srcdoc = html;
+      if (!response.ok) {
+        const data = await readJson(response);
+        throw new Error(data.error || `Preview failed (${response.status})`);
+      }
+      previewIframe.srcdoc = await response.text();
     } catch (err) {
       if (err.name === 'AbortError') return;
       console.warn('[preview] Update failed:', err.message);
@@ -711,6 +925,8 @@
     }
   }
 
+  // ===== Downloads =====
+
   function setExportStatus(message, isError = false) {
     exportStatus.textContent = message;
     exportStatus.classList.toggle('is-error', isError);
@@ -719,11 +935,22 @@
     }
   }
 
+  /** Turn a fetched blob into a browser download. */
+  function saveBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
   async function downloadExport(format) {
     const btn = format === 'pdf' ? downloadPdfBtn : downloadDocxBtn;
-    const originalText = btn.textContent;
     btn.disabled = true;
-    btn.textContent = `Generating ${format.toUpperCase()}…`;
+    btn.innerHTML = `<span class="mini-spinner"></span> Generating ${format.toUpperCase()}…`;
     setExportStatus('');
 
     try {
@@ -732,23 +959,12 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ resume, template: selectedTemplate, format }),
       });
-
       if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
+        const errData = await readJson(response);
         throw new Error(errData.error || `Export failed (${response.status})`);
       }
-
-      const blob = await response.blob();
       const name = (resume.contact?.name || 'Resume').replace(/[^a-zA-Z0-9 _-]/g, '').trim() || 'Resume';
-      const ext = format === 'pdf' ? '.pdf' : '.docx';
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${name}${ext}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      saveBlob(await response.blob(), `${name}.${format}`);
       setExportStatus(`${format.toUpperCase()} downloaded successfully.`);
       showToast(`${format.toUpperCase()} downloaded.`, 'success', { duration: 3000 });
     } catch (err) {
@@ -756,11 +972,16 @@
       showToast(err.message || 'Export failed. Please try again.', 'error');
     } finally {
       btn.disabled = false;
-      btn.innerHTML = `<span class="export-icon" aria-hidden="true">⬇</span> Download ${format.toUpperCase()}`;
+      btn.innerHTML = `<span class="export-icon" aria-hidden="true">↓</span> Download ${format.toUpperCase()}`;
     }
   }
 
-  // ===== Cover Letter Functions =====
+  // ===== Cover letter =====
+
+  function setCoverLetterDownloadsEnabled(enabled) {
+    downloadLetterBtn.disabled = !enabled;
+    downloadLetterDocxBtn.disabled = !enabled;
+  }
 
   function setCoverLetterStatus(message, isError = false) {
     coverLetterStatus.textContent = message;
@@ -776,8 +997,8 @@
       return;
     }
     generateLetterBtn.disabled = true;
-    const originalLabel = generateLetterBtn.textContent;
-    generateLetterBtn.textContent = '✍ Writing…';
+    const originalLabel = generateLetterBtn.innerHTML;
+    generateLetterBtn.innerHTML = '<span class="mini-spinner"></span> Writing…';
     setCoverLetterStatus('');
     try {
       const payload = { resume };
@@ -788,26 +1009,24 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      const data = await response.json();
+      const data = await readJson(response);
       if (!response.ok) throw new Error(data.error || 'Could not generate a cover letter.');
       coverLetter = String(data.cover_letter || '');
       coverLetterInput.value = coverLetter;
-      const isFallback = data.generation_mode === 'fallback';
-      coverLetterMode.hidden = !isFallback;
-      coverLetterMode.textContent = 'Fallback draft';
+      coverLetterMode.hidden = data.generation_mode !== 'fallback';
       if (data.generation_warning) {
         setCoverLetterStatus(data.generation_warning, true);
       } else {
-        setCoverLetterStatus('Draft generated — edit it freely, then download the PDF.');
+        setCoverLetterStatus('Draft generated — edit it freely, then download it.');
       }
-      downloadLetterBtn.disabled = !coverLetter.trim();
+      setCoverLetterDownloadsEnabled(Boolean(coverLetter.trim()));
       scheduleCoverLetterPreviewUpdate({ immediately: true });
     } catch (err) {
       setCoverLetterStatus(err.message || 'Cover letter generation failed. Please try again.', true);
       showToast(err.message || 'Cover letter generation failed. Please try again.', 'error');
     } finally {
       generateLetterBtn.disabled = false;
-      generateLetterBtn.textContent = originalLabel;
+      generateLetterBtn.innerHTML = originalLabel;
     }
   }
 
@@ -845,43 +1064,37 @@
     }
   }
 
-  async function downloadCoverLetter() {
+  async function downloadCoverLetter(format) {
     if (!coverLetter.trim()) return;
-    downloadLetterBtn.disabled = true;
-    downloadLetterBtn.textContent = 'Generating PDF…';
+    const btn = format === 'pdf' ? downloadLetterBtn : downloadLetterDocxBtn;
+    const originalLabel = btn.innerHTML;
+    setCoverLetterDownloadsEnabled(false);
+    btn.innerHTML = '<span class="mini-spinner"></span>';
     setCoverLetterStatus('');
     try {
       const response = await fetch('/api/export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resume, coverLetter, format: 'pdf' }),
+        body: JSON.stringify({ resume, coverLetter, format }),
       });
       if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
+        const errData = await readJson(response);
         throw new Error(errData.error || `Export failed (${response.status})`);
       }
-      const blob = await response.blob();
       const name = (resume.contact?.name || 'CoverLetter').replace(/[^a-zA-Z0-9 _-]/g, '').trim() || 'CoverLetter';
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${name}-Cover-Letter.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      setCoverLetterStatus('PDF downloaded successfully.');
-      showToast('Cover letter PDF downloaded.', 'success', { duration: 3000 });
+      saveBlob(await response.blob(), `${name}-Cover-Letter.${format}`);
+      setCoverLetterStatus(`${format.toUpperCase()} downloaded successfully.`);
+      showToast(`Cover letter ${format.toUpperCase()} downloaded.`, 'success', { duration: 3000 });
     } catch (err) {
       setCoverLetterStatus(err.message || 'Export failed. Please try again.', true);
       showToast(err.message || 'Cover letter export failed. Please try again.', 'error');
     } finally {
-      downloadLetterBtn.disabled = !coverLetter.trim();
-      downloadLetterBtn.innerHTML = '<span class="export-icon" aria-hidden="true">⬇</span> Download PDF';
+      btn.innerHTML = originalLabel;
+      setCoverLetterDownloadsEnabled(Boolean(coverLetter.trim()));
     }
   }
 
-  // ===== Saved Versions Functions =====
+  // ===== Saved versions =====
 
   function formatVersionDate(iso) {
     try {
@@ -892,7 +1105,7 @@
   async function refreshVersions() {
     await withLoading(null, async () => {
       const response = await fetch('/api/versions');
-      const data = await response.json().catch(() => ({}));
+      const data = await readJson(response);
       if (!response.ok) throw new Error(data.error || 'Could not load saved versions.');
       renderVersionsList(data.versions || []);
     }).catch(() => {}); // error already toasted
@@ -909,11 +1122,11 @@
         <div class="version-info" data-action="load" role="button" tabindex="0" title="Load this version">
           <strong>${escapeHtml(v.name)}</strong>
           <small>Saved ${escapeHtml(formatVersionDate(v.updated_at))}</small>
-      </div>
+        </div>
         <div class="version-actions">
-          <button class="version-btn" data-action="update" title="Save current edits into this version">↻</button>
-          <button class="version-btn" data-action="duplicate" title="Duplicate">⧉</button>
-          <button class="version-btn danger" data-action="delete" title="Delete">✕</button>
+          <button class="version-btn" data-action="update" title="Save current edits into this version" aria-label="Update version">↻</button>
+          <button class="version-btn" data-action="duplicate" title="Duplicate" aria-label="Duplicate version">⧉</button>
+          <button class="version-btn danger" data-action="delete" title="Delete" aria-label="Delete version">✕</button>
         </div>
       </div>`).join('');
   }
@@ -937,7 +1150,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, resume, coverLetter, jobDescription: jobDescInput.value }),
       });
-      const data = await response.json().catch(() => ({}));
+      const data = await readJson(response);
       if (!response.ok) throw new Error(data.error || 'Could not save this version.');
       loadedVersionId = data.id;
       versionNameInput.value = '';
@@ -952,7 +1165,7 @@
   async function loadVersion(id) {
     await withLoading(null, async () => {
       const response = await fetch(`/api/versions/${encodeURIComponent(id)}`);
-      const data = await response.json().catch(() => {});
+      const data = await readJson(response);
       if (!response.ok) throw new Error(data.error || 'Could not load that version.');
       resume = normaliseResume(data.resume);
       coverLetter = String(data.cover_letter || '');
@@ -962,10 +1175,9 @@
       loadedVersionId = id;
       renderEditor();
       resetInsightPlaceholders();
-      editorSection.classList.remove('hidden');
-      exportSection.classList.remove('hidden');
-      coverLetterSection.classList.remove('hidden');
-      downloadLetterBtn.disabled = !coverLetter.trim();
+      revealWorkspace();
+      updateVersionBtn.classList.remove('hidden');
+      setCoverLetterDownloadsEnabled(Boolean(coverLetter.trim()));
       coverLetterMode.hidden = true;
       scheduleAnalysis({ immediately: true });
       schedulePreviewUpdate({ immediately: true });
@@ -982,7 +1194,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ resume, coverLetter, jobDescription: jobDescInput.value }),
       });
-      const data = await response.json().catch(() => ({}));
+      const data = await readJson(response);
       if (!response.ok) throw new Error(data.error || 'Could not update that version.');
       showToast('Changes saved into the version.', 'success', { duration: 3000 });
       await refreshVersions();
@@ -992,7 +1204,7 @@
   async function duplicateVersion(id) {
     await withLoading(null, async () => {
       const response = await fetch(`/api/versions/${encodeURIComponent(id)}/duplicate`, { method: 'POST' });
-      const data = await response.json().catch(() => ({}));
+      const data = await readJson(response);
       if (!response.ok) throw new Error(data.error || 'Could not duplicate that version.');
       showToast(`Created “${data.name}”.`, 'success', { duration: 3000 });
       await refreshVersions();
@@ -1002,7 +1214,7 @@
   async function deleteVersion(id) {
     await withLoading(null, async () => {
       const response = await fetch(`/api/versions/${encodeURIComponent(id)}`, { method: 'DELETE' });
-      const data = await response.json().catch(() => ({}));
+      const data = await readJson(response);
       if (!response.ok) throw new Error(data.error || 'Could not delete that version.');
       if (loadedVersionId === id) {
         loadedVersionId = null;
@@ -1013,14 +1225,18 @@
     }).catch(() => {});
   }
 
-  function selectTemplate(templateKey) {
-    selectedTemplate = templateKey;
-    tplClassicBtn.classList.toggle('active', templateKey === 'classic');
-    tplModernBtn.classList.toggle('active', templateKey === 'modern');
-    schedulePreviewUpdate({ immediately: true });
-  }
+  // ===== Event listeners =====
 
-  // ===== Event Listeners =====
+  themeToggle.addEventListener('click', () => {
+    applyTheme(document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
+  });
+
+  stepper.addEventListener('click', (event) => {
+    const step = event.target.closest('.step');
+    if (!step || step.disabled) return;
+    document.querySelector(step.dataset.target)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    activateStep(step.dataset.step);
+  });
 
   ['dragenter', 'dragover'].forEach((name) => dropZone.addEventListener(name, (event) => {
     event.preventDefault();
@@ -1047,6 +1263,7 @@
   fileInput.addEventListener('change', (event) => handleFile(event.target.files?.[0]));
   retryBtn.addEventListener('click', resetState);
   clearBtn.addEventListener('click', resetState);
+
   resumeEditor.addEventListener('input', (event) => {
     if (!event.target.matches('input, textarea')) return;
     updateModelFromField(event.target);
@@ -1057,7 +1274,6 @@
   jobDescInput.addEventListener('input', () => scheduleAnalysis());
   analyzeBtn.addEventListener('click', () => scheduleAnalysis({ immediately: true }));
 
-  // Saved versions listeners
   saveVersionBtn.addEventListener('click', saveVersion);
   versionNameInput.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') { event.preventDefault(); saveVersion(); }
@@ -1075,25 +1291,40 @@
     else if (action === 'delete') deleteVersion(id);
     else if (action === 'load' || !action) loadVersion(id);
   });
+  versionsList.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    const info = event.target.closest('.version-info');
+    if (!info) return;
+    event.preventDefault();
+    loadVersion(info.closest('.version-item').dataset.id);
+  });
+
   rewriteSuggestions.addEventListener('click', (event) => {
     const button = event.target.closest('[data-suggestion-index]');
     if (button && !button.disabled) applySuggestion(Number(button.dataset.suggestionIndex));
   });
 
-  // Export listeners
-  tplClassicBtn.addEventListener('click', () => selectTemplate('classic'));
-  tplModernBtn.addEventListener('click', () => selectTemplate('modern'));
+  templateGallery.addEventListener('click', (event) => {
+    const card = event.target.closest('.tpl-card');
+    if (card) selectTemplate(card.dataset.template);
+  });
   downloadPdfBtn.addEventListener('click', () => downloadExport('pdf'));
   downloadDocxBtn.addEventListener('click', () => downloadExport('docx'));
 
-  // Cover letter listeners
   generateLetterBtn.addEventListener('click', generateCoverLetter);
-  downloadLetterBtn.addEventListener('click', downloadCoverLetter);
+  downloadLetterBtn.addEventListener('click', () => downloadCoverLetter('pdf'));
+  downloadLetterDocxBtn.addEventListener('click', () => downloadCoverLetter('docx'));
   coverLetterInput.addEventListener('input', () => {
     coverLetter = coverLetterInput.value;
-    downloadLetterBtn.disabled = !coverLetter.trim();
+    setCoverLetterDownloadsEnabled(Boolean(coverLetter.trim()));
     scheduleCoverLetterPreviewUpdate();
   });
 
+  // ===== Boot =====
+
+  initTheme();
+  observeSections();
+  resetInsightPlaceholders();
   checkHealth();
+  loadTemplates();
 })();

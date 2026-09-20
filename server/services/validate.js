@@ -3,6 +3,8 @@
  * Each validator returns an array of error strings; empty array = valid.
  */
 
+const { TEMPLATE_KEYS, isTemplate } = require('../templates');
+
 function isNonEmptyString(v, max) {
   return typeof v === 'string' && v.trim().length > 0 && v.length <= max;
 }
@@ -98,6 +100,10 @@ function validateExportBody(body) {
   const errors = [];
   if (!body || typeof body !== 'object') return ['Request body must be an object.'];
 
+  if (body.format !== undefined && !['pdf', 'docx'].includes(body.format)) {
+    errors.push('"format" must be "pdf" or "docx".');
+  }
+
   const isCoverLetter = body.coverLetter !== undefined;
   if (isCoverLetter) {
     if (typeof body.coverLetter !== 'string' || body.coverLetter.length > 100000) {
@@ -108,11 +114,8 @@ function validateExportBody(body) {
   }
 
   errors.push(...validateResume(body.resume));
-  if (body.template !== undefined && !['classic', 'modern'].includes(body.template)) {
-    errors.push('"template" must be "classic" or "modern".');
-  }
-  if (body.format !== undefined && !['pdf', 'docx'].includes(body.format)) {
-    errors.push('"format" must be "pdf" or "docx".');
+  if (body.template !== undefined && !isTemplate(body.template)) {
+    errors.push(`"template" must be one of: ${TEMPLATE_KEYS.join(', ')}.`);
   }
   if (body.keywords !== undefined) {
     const k = body.keywords;
