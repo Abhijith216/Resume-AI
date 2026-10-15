@@ -111,6 +111,7 @@
 
   // Saved versions state
   let loadedVersionId = null;
+  let fromBuilder = false;
 
   function createEmptyResume() {
     return {
@@ -429,33 +430,17 @@
   }
 
   function resumeToText() {
-    const rows = [];
-    const contact = [resume.contact.name, resume.contact.title, resume.contact.email, resume.contact.phone, resume.contact.location, resume.contact.links].filter(Boolean);
-    if (contact.length) rows.push(contact.join(' | '));
-    if (resume.summary.trim()) rows.push('PROFESSIONAL SUMMARY', resume.summary.trim());
-    if (resume.experience.length) {
-      rows.push('PROFESSIONAL EXPERIENCE');
-      resume.experience.forEach((item) => {
-        const heading = [item.role, item.company, item.dates, item.location].filter(Boolean).join(' | ');
-        if (heading) rows.push(heading);
-        if (item.bullets.trim()) rows.push(item.bullets.trim());
-      });
-    }
-    if (resume.education.length) {
-      rows.push('EDUCATION');
-      resume.education.forEach((item) => {
-        const heading = [item.degree, item.institution, item.dates, item.location].filter(Boolean).join(' | ');
-        if (heading) rows.push(heading);
-      });
-    }
-    if (resume.skills.trim()) rows.push('SKILLS', resume.skills.trim());
-    return rows.join('\n\n');
+    return window.ResumeTools.toText(resume);
   }
 
   // ===== Analysis =====
 
   function scheduleAnalysis({ immediately = false } = {}) {
     clearTimeout(debounceTimer);
+    requestSerial++;
+    if (fromBuilder) {
+      try { sessionStorage.setItem(window.ResumeTools.HANDOFF_KEY, JSON.stringify({ resume, template: selectedTemplate, jobDescription: jobDescInput.value })); } catch { /* Return action handles storage errors. */ }
+    }
     // Do not allow a score calculated for an earlier edit to flash into view
     // while the user is still composing the next one.
     if (!immediately && analysisController) {
@@ -464,26 +449,33 @@
       setAnalysisLoading(false);
     }
     const resumeText = resumeToText();
-    if (!resumeText.trim()) return;
+    if (!resumeText.trim()) {
+      analysis = null;
+      resetInsightPlaceholders();
+      setAnalysisLoading(false);
+      setAnalysisStatus('Add resume details to start the live evaluation.');
+      return;
+    }
     setAnalysisStatus(immediately ? 'Analysis queued…' : 'Changes detected — refreshing in 2 seconds…');
     debounceTimer = setTimeout(runAnalysis, immediately ? 0 : 2000);
   }
 
   function analysisPayload() {
-    const payload = { resumeText: resumeToText() };
+    const payload = { resumeText: resumeToText(), resume };
     const jobDescription = jobDescInput.value.trim();
     if (jobDescription) payload.jobDescription = jobDescription;
     return payload;
   }
 
   function setAnalysisLoading(isLoading) {
+    $('#ai-rewrites-btn').disabled = isLoading;
     analysisProgress.classList.toggle('hidden', !isLoading);
     analyzeBtn.disabled = isLoading;
     analyzeBtn.classList.toggle('is-busy', isLoading);
     analyzeBtn.querySelector('.refresh-label').textContent = isLoading ? 'Checking' : 'Refresh';
   }
 
-  async function runAnalysis() {
+  async function runAnalysis({ includeAi = false } = {}) {
     clearTimeout(debounceTimer);
     const resumeText = resumeToText();
     if (!resumeText.trim()) {
@@ -502,7 +494,7 @@
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(analysisPayload()),
+        body: JSON.stringify({ ...analysisPayload(), includeAi }),
         signal: analysisController.signal,
       });
       const data = await readJson(response);
@@ -534,9 +526,8 @@
     updateGauge(atsGauge, atsScoreBar, atsScoreValue, atsProgress, atsScore, false);
     updateGauge(matchGauge, matchScoreBar, matchScoreValue, matchProgress, matchScore, !hasMatchScore);
 
-    matchScoreNote.textContent = hasMatchScore
-      ? 'Alignment of skills, language, and experience with the target role.'
-      : 'Add a target job to measure keyword alignment.';
+    matchScoreNote.textContent = analysis.match_note || 'Add a target job to measure keyword alignment.';
+    $('#score-methodology').innerHTML = window.ResumeTools.report(analysis);
 
     renderKeywords(analysis?.missing_keywords || [], analysis?.matched_keywords || []);
     renderStructureIssues(analysis?.structure_issues || []);
@@ -717,6 +708,7 @@
   /** Reveal every workspace section — editor, cover letter, and export. */
   function revealWorkspace() {
     hero.classList.add('hidden');
+    $('#new-resume-entry').classList.add('hidden');
     editorSection.classList.remove('hidden');
     coverLetterSection.classList.remove('hidden');
     exportSection.classList.remove('hidden');
@@ -724,6 +716,7 @@
   }
 
   function resetInsightPlaceholders() {
+    $('#score-methodology').innerHTML = '';
     updateGauge(atsGauge, atsScoreBar, atsScoreValue, atsProgress, 0, true);
     updateGauge(matchGauge, matchScoreBar, matchScoreValue, matchProgress, 0, true);
     matchScoreNote.textContent = 'Add a target job to measure keyword alignment.';
@@ -739,6 +732,10 @@
   }
 
   function resetState() {
+    requestSerial++;
+    fromBuilder = false;
+    $('#builder-nav-link').textContent = 'New resume';
+    $('#new-resume-entry').classList.remove('hidden');
     clearTimeout(debounceTimer);
     clearTimeout(previewDebounceTimer);
     clearTimeout(coverLetterDebounceTimer);
@@ -852,6 +849,9 @@
   function selectTemplate(templateKey) {
     if (!templates.some((tpl) => tpl.key === templateKey)) return;
     selectedTemplate = templateKey;
+    if (fromBuilder) {
+      try { sessionStorage.setItem(window.ResumeTools.HANDOFF_KEY, JSON.stringify({ resume, template: selectedTemplate, jobDescription: jobDescInput.value })); } catch {}
+    }
     templateGallery.querySelectorAll('.tpl-card').forEach((card) => {
       const isActive = card.dataset.template === templateKey;
       card.classList.toggle('active', isActive);
@@ -1273,6 +1273,16 @@
   resumeEditor.addEventListener('click', handleEditorAction);
   jobDescInput.addEventListener('input', () => scheduleAnalysis());
   analyzeBtn.addEventListener('click', () => scheduleAnalysis({ immediately: true }));
+  $('#ai-rewrites-btn').addEventListener('click', () => runAnalysis({ includeAi: true }));
+  $('#builder-nav-link').addEventListener('click', (event) => {
+    if (!fromBuilder) return;
+    try {
+      sessionStorage.setItem(window.ResumeTools.RETURN_KEY, JSON.stringify({ resume, template: selectedTemplate, jobDescription: jobDescInput.value }));
+    } catch {
+      event.preventDefault();
+      showToast('Could not transfer your edits. Save or download this resume before returning to the builder.', 'error');
+    }
+  });
 
   saveVersionBtn.addEventListener('click', saveVersion);
   versionNameInput.addEventListener('keydown', (event) => {
@@ -1327,4 +1337,23 @@
   resetInsightPlaceholders();
   checkHealth();
   loadTemplates();
+  // Transfer the structured resume directly, preserving fields and the chosen template.
+  try {
+    const raw = sessionStorage.getItem(window.ResumeTools.HANDOFF_KEY);
+    if (raw && new URLSearchParams(location.search).get('from') === 'builder') {
+      const handoff = JSON.parse(raw);
+      if (handoff.resume) {
+        resume = normaliseResume(window.ResumeTools.clean(handoff.resume));
+        selectedTemplate = typeof handoff.template === 'string' ? handoff.template : 'classic';
+        jobDescInput.value = typeof handoff.jobDescription === 'string' ? handoff.jobDescription : '';
+        fromBuilder = true;
+        $('#builder-nav-link').textContent = 'Back to builder';
+        uploadCard.classList.add('hidden');
+        renderEditor(); revealWorkspace();
+        scheduleAnalysis({ immediately: true });
+        schedulePreviewUpdate({ immediately: true });
+        refreshVersions();
+      }
+    }
+  } catch { showToast('Could not restore your builder draft. It is still available in the resume studio.', 'error'); }
 })();

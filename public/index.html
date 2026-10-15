@@ -11,6 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/builder.css">
 </head>
 <body>
   <div class="aurora" aria-hidden="true">
@@ -48,6 +49,7 @@
       </nav>
 
       <div class="topbar-actions">
+        <a class="btn btn-ghost btn-sm" href="/builder" id="builder-nav-link">New resume</a>
         <button class="icon-btn" id="theme-toggle" type="button" aria-label="Switch to light theme" title="Switch theme">
           <svg class="icon-moon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z" stroke-width="1.7" stroke-linejoin="round"/></svg>
           <svg class="icon-sun" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="4.2" stroke-width="1.7"/><path d="M12 2.6v2.2M12 19.2v2.2M21.4 12h-2.2M4.8 12H2.6M18.6 5.4l-1.6 1.6M7 17l-1.6 1.6M18.6 18.6 17 17M7 7 5.4 5.4" stroke-width="1.7" stroke-linecap="round"/></svg>
@@ -71,6 +73,10 @@
         </ul>
       </section>
 
+      <section class="new-resume-entry" id="new-resume-entry" aria-label="Create a new resume">
+        <div><h2>Starting with a fresh page?</h2><p>Build a new resume with guided inputs, AI writing help, and a template that fits.</p></div>
+        <a class="btn btn-primary" href="/builder">Create a new resume →</a>
+      </section>
       <section class="upload-section" id="upload-section" aria-label="Upload resume">
         <div class="upload-card" id="upload-card">
           <div id="drop-zone" class="drop-zone" role="button" tabindex="0" aria-label="File upload drop zone">
@@ -185,10 +191,10 @@
                     </div>
                   </div>
                   <div class="gauge-meta">
-                    <h4>ATS structure</h4>
-                    <p>Clear hierarchy, conventional sections, clean parsing.</p>
+                    <h4>Resume readiness</h4>
+                    <p>Repeatable checks of your details, dates, and content.</p>
                   </div>
-                  <span class="visually-hidden" role="progressbar" id="ats-progress" aria-label="ATS structure score" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></span>
+                  <span class="visually-hidden" role="progressbar" id="ats-progress" aria-label="Resume readiness score" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></span>
                 </article>
 
                 <article class="gauge score-muted" id="match-gauge">
@@ -203,7 +209,7 @@
                     </div>
                   </div>
                   <div class="gauge-meta">
-                    <h4>Job match</h4>
+                    <h4>Keyword coverage</h4>
                     <p id="match-score-note">Add a target job to measure keyword alignment.</p>
                   </div>
                   <span class="visually-hidden" role="progressbar" id="match-progress" aria-label="Job match score" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></span>
@@ -218,6 +224,7 @@
                 <span aria-hidden="true">!</span><span id="analysis-error-message"></span>
               </div>
 
+              <div id="score-methodology"></div>
               <div id="missing-keywords" class="missing-keywords hidden">
                 <p>Keywords from the job description</p>
                 <div id="keyword-list" class="keyword-list"></div>
@@ -227,8 +234,8 @@
             <section class="glass-panel insight-card" aria-labelledby="issues-title">
               <div class="section-heading">
                 <div>
-                  <p class="eyebrow">Parsing check</p>
-                  <h3 id="issues-title">Structure issues</h3>
+                  <p class="eyebrow">Prioritized feedback</p>
+                  <h3 id="issues-title">What to improve</h3>
                 </div>
                 <span id="issue-count" class="count-badge">—</span>
               </div>
@@ -240,6 +247,7 @@
                 <div>
                   <p class="eyebrow">Content upgrade</p>
                   <h3 id="suggestions-title">Rewrite suggestions</h3>
+                  <button id="ai-rewrites-btn" class="btn btn-ghost btn-sm" type="button">Get AI rewrites</button>
                 </div>
                 <span id="suggestion-count" class="count-badge">—</span>
               </div>
@@ -355,6 +363,7 @@
   </div>
 
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
+  <script src="/resume-tools.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>

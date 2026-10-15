@@ -100,7 +100,8 @@ The app is available at **http://localhost:3000**. Data is stored in SQLite at `
 | GET    | `/api/health`           | Health check (`{ status: "ok" }`)                 |
 | POST   | `/api/parse-resume`     | Upload PDF/DOCX and extract plain text            |
 | POST   | `/api/structure-resume` | Structure raw resume text into sections and items |
-| POST   | `/api/analyze`          | Analyze resume structure & content match with LLM |
+| POST   | `/api/analyze`          | Deterministic readiness and weighted skill coverage; optional AI rewrites |
+| POST   | `/api/writing-assist`   | Rewrite user-provided summary or experience notes for review |
 | POST   | `/api/cover-letter`     | Generate a tailored cover letter (resume + JD)    |
 | GET    | `/api/versions`         | List saved versions                                |
 | GET    | `/api/versions/:id`     | Load one version (resume + letter + JD)           |
@@ -115,10 +116,32 @@ The app is available at **http://localhost:3000**. Data is stored in SQLite at `
 
 - **Split-Screen Workspace**:
   - **Left Panel**: Editable resume fields grouped into 5 clear sections (Contact, Summary, Experience, Education, Skills) with dynamic add/remove entry controls.
-  - **Right Panel**: Live ATS Structure Score and Job Match Score progress bars with smooth animations, missing keywords chip list, structure issues breakdown, and rewrite suggestions.
-- **Debounced Live Analysis**: Edits trigger a 2-second debounce timer that automatically re-runs `/api/analyze` to update scores and suggestions in real time.
+  - **Right Panel**: Resume readiness and job keyword coverage, point-by-point evidence, prioritized improvements, and on-demand AI rewrites.
+- **Debounced Live Analysis**: Edits trigger a 2-second debounce timer for local deterministic scoring. AI rewrites run only when requested with **Get AI rewrites**, avoiding model calls on every edit.
 - **One-Click Rewrite Application**: Each suggestion includes an "Apply rewrite" button that finds the matching field, swaps in the suggested bullet point, highlights the field, and re-triggers analysis.
 - **Job Description Targeting**: Paste a target job above the editor to get content-match scoring, matched-vs-missing keyword highlighting in the live preview, and a tailored cover letter draft.
 - **Cover Letter Studio**: Generate a 3–4 paragraph tailored cover letter, edit it inline, watch the letterhead preview update live, and export it as its own PDF.
 - **Saved Versions (SQLite)**: Name and save resume versions (e.g. "Backend role — Company X"), then list, load, update, duplicate, or delete them from the Library card.
 - **Robustness**: Input validation on every endpoint, loading states on every API call, and toast notifications instead of silent failures.
+
+### New resume studio
+
+Open **http://localhost:3000/builder**, or choose **Create a new resume** on the home page. Choose guided, first-resume, or blank-canvas mode, then enter contact details, experience/projects, education, skills, and a summary. AI can rewrite the candidate's notes; drafts must be reviewed and explicitly applied. Seven existing templates render a live preview and export to PDF/DOCX.
+
+The final review offers **Check ATS score** and **Open ATS improvement workspace**. Structured data, job description, and selected template transfer without a file upload. **Back to builder** brings edited content back to the studio. The active builder draft is stored in browser local storage; it is not a cloud account or multi-device library. The existing Saved versions feature remains available in the improvement workspace.
+
+### Scoring v2
+
+The same inputs produce the same scores, including when AI is unavailable. `/api/analyze` accepts the existing `resumeText` and optional `jobDescription`; clients should also send the structured `resume` for field-level checks. Set `includeAi: true` only to request writing suggestions. Structured fields are authoritative when both text and fields are supplied.
+
+Readiness weights total 100: contact 20, populated sections 30, chronology 20, content evidence 20, and text quality 10. Each check returns earned/possible points, evidence, and advice. Empty entries and headings alone earn no section points. Action verbs and measured outcomes are writing heuristics, not ATS parsing requirements; no numbers should be invented to increase a score.
+
+Job keyword coverage uses a curated English skill vocabulary with aliases and punctuation-aware boundaries. Required terms weigh 3, mentioned terms 2, preferred terms 1. Repetition and aliases cannot inflate the score. No job description, or no recognized skills, returns `null` rather than a misleading zero. Missing and matched lists are disjoint and evidence is available in the UI. Unrecognized skills, alternative qualifications, seniority, years of experience, and eligibility require manual review.
+
+These scores are application heuristics, not an employer's ATS result or an interview prediction. Text alone cannot establish original-file layout or extraction order. [Greenhouse's parsing guidance](https://support.greenhouse.io/hc/en-us/articles/200989175-Unsuccessful-resume-parse) explains why tables, columns, images, and header/footer placement can affect parsing; this app does not claim to detect them from plain text.
+
+### Verification
+
+- `npm test`: scoring regression and real HTTP route tests with a controlled AI provider.
+- `npm run test:builder`: browser flow against the running app at port 3000. Exercises creation, draft restore, AI review/apply (stubbed), templates, scoring, round-trip handoff, real binary exports, mobile layout, and light theme. Uses installed Chrome/Edge when available; override with `TEST_CHROME_PATH`. `TEST_BASE_URL` selects another local server. Screenshots are written to ignored `.test-artifacts/`.
+- AI writing requires the existing provider configuration. Provider failures preserve the user's notes and do not interrupt scoring.

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Create a resume from scratch with guided steps, AI writing assistance, professional templates, and an ATS readiness review.">
+  <title>New resume studio — ResumeAI</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%237c5ce7'/><path d='M9 10h14M9 16h14M9 22h9' stroke='white' stroke-width='2.6'/></svg>">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/builder.css">
+</head>
+<body class="builder-body">
+  <header class="builder-topbar">
+    <a class="logo" href="/" aria-label="ResumeAI home"><span class="builder-logo-mark">R</span><span class="logo-word">Resume<em>AI</em></span></a>
+    <nav class="dashboard-nav" aria-label="Workspace"><a href="/builder" aria-current="page">Resume studio</a><a href="/">ATS workspace</a></nav>
+    <button id="builder-theme" class="btn btn-ghost btn-sm" type="button">Light theme</button>
+  </header>
+  <main class="builder-shell">
+    <aside class="builder-sidebar">
+      <p class="eyebrow">CREATE SOMETHING NEXT</p>
+      <h1>Your story.<br>Your next chapter.</h1>
+      <p class="builder-muted">A little guidance. A stronger resume.</p>
+      <nav id="builder-steps" aria-label="Resume building steps"></nav>
+      <div class="builder-save"><span class="save-dot"></span><span id="draft-status" role="status">Draft saved in this browser</span></div>
+      <button id="restart-builder" class="btn btn-ghost btn-sm" type="button">Start another resume</button>
+      <p class="privacy-note">Drafts stay in this browser. AI assistance sends the notes you select to the configured AI provider.</p>
+    </aside>
+    <div class="builder-main">
+      <div class="builder-heading"><div><p class="eyebrow" id="step-counter">YOUR NEW RESUME</p><h2 id="step-title" tabindex="-1">How would you like to start?</h2><p id="step-description" class="builder-muted"></p></div><span class="studio-badge">RESUME STUDIO</span></div>
+      <div class="builder-progress" aria-hidden="true"><span id="builder-progress-fill"></span></div>
+      <div class="builder-workspace">
+        <section class="builder-card" aria-label="Resume inputs">
+          <form id="builder-form"></form>
+          <div id="builder-message" class="builder-message" role="status" aria-live="polite"></div>
+          <div class="builder-controls" id="builder-controls"><button class="btn btn-ghost" id="builder-back" type="button">Back</button><span id="step-hint" class="builder-muted"></span><button class="btn btn-primary" id="builder-next" type="button">Continue →</button></div>
+        </section>
+        <aside class="builder-preview-panel" aria-label="Live resume preview">
+          <div class="preview-heading"><div><span class="eyebrow">TAKING SHAPE</span><h3>Live preview</h3></div><span class="builder-muted" id="builder-template-name">Classic</span></div>
+          <div class="builder-paper"><iframe id="builder-preview" title="Your resume preview" sandbox="allow-same-origin"></iframe><div id="preview-empty"><span class="preview-empty-icon">≡</span><h3>A fresh page, full of possibility.</h3><p>Your resume will take shape here as you add your details.</p></div></div>
+          <p id="builder-preview-status" class="builder-muted" role="status">Single-column layout · Selectable text</p>
+        </aside>
+      </div>
+    </div>
+  </main>
+  <dialog id="ai-dialog" class="builder-dialog" aria-labelledby="ai-title"><div class="dialog-body"><p class="eyebrow">YOUR WORDS, REFINED</p><h2 id="ai-title">Review the AI draft</h2><p>Check every fact before applying. You can edit the suggestion below.</p><label for="ai-suggestion">Suggested wording</label><textarea id="ai-suggestion" rows="9" maxlength="10000"></textarea><p id="ai-explanation"></p><div class="dialog-actions"><button type="button" id="ai-cancel" class="btn btn-ghost">Keep my writing</button><button type="button" id="ai-apply" class="btn btn-primary">Use this draft</button></div></div></dialog>
+  <dialog id="restart-dialog" class="builder-dialog" aria-labelledby="restart-title"><div class="dialog-body"><h2 id="restart-title">Start another resume?</h2><p>This replaces the current browser draft. Download your resume first if you want to keep a copy.</p><div class="dialog-actions"><button type="button" id="restart-cancel" class="btn btn-ghost">Keep working</button><button type="button" id="restart-confirm" class="btn btn-primary">Start fresh</button></div></div></dialog>
+  <script src="/resume-tools.js"></script>
+  <script src="/builder.js"></script>
+</body>
+</html>

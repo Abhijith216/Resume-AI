@@ -78,7 +78,7 @@ async function callGemini({ apiKey, model, systemPrompt, userPrompt }) {
 
   for (const chosenModel of candidateModels) {
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${chosenModel}:generateContent?key=${apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(chosenModel)}:generateContent`;
 
       const res = await llmFetch(url, {
         method: 'POST',
@@ -213,7 +213,7 @@ async function callLlmJson({ systemPrompt, userPrompt }) {
   try {
     return JSON.parse(jsonText);
   } catch (parseErr) {
-    console.error('[llm] JSON parse failed on text:', jsonText);
+    console.error('[llm] Provider returned invalid JSON.');
     throw new Error('The AI model returned an invalid JSON response. Please try again.');
   }
 }

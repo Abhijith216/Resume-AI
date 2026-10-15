@@ -1,4 +1,5 @@
 require('dotenv').config();
+require('dotenv').config({ path: '.env.local', override: true });
 
 const express = require('express');
 const path = require('path');
@@ -36,6 +37,7 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 app.use('/api/health', healthRouter);
 app.use('/api/parse-resume', parseResumeRouter);
 app.use('/api/analyze', analyzeRouter);
+app.use('/api/writing-assist', require('./api/writing-assist'));
 app.use('/api/structure-resume', structureResumeRouter);
 app.use('/api/export', exportRouter);
 app.use('/api/cover-letter', coverLetterRouter);
@@ -56,6 +58,10 @@ app.use((err, req, res, next) => {
 });
 
 // --- SPA Fallback: serve index.html for any non-API, non-static request ---
+app.get('/builder', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'builder.html'));
+});
+
 app.get('*', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });
